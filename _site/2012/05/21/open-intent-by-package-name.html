@@ -1,0 +1,199 @@
+<!doctype html>
+<!--[if lt ie 7]>      <html class="lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if ie 7]>         <html class="lt-ie9 lt-ie8 ie7"> <![endif]-->
+<!--[if ie 8]>         <html class="lt-ie9 ie8"> <![endif]-->
+<!--[if gt ie 8]><!-->
+<html class=""><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Spoqa Tech Blog | 패키지 이름을 통해 디폴트 브라우저 띄워보기</title>
+  <link rel="canonical" href="https://spoqa.github.io/2012/05/21/open-intent-by-package-name.html">
+  <meta property="og:title" content="패키지 이름을 통해 디폴트 브라우저 띄워보기">
+  <meta property="og:url" content="https://spoqa.github.io/2012/05/21/open-intent-by-package-name.html">
+  <meta property="og:site_name" content="컵아이">
+  
+  
+  <meta property="og:type" content="article">
+  <meta property="og:description" content="최근 앱 개발중 있었던 문제를 살펴보면서 패키지명을 통해 인텐트를 띄우는 방법을 알아봅니다.">
+  
+  
+  <script>
+    window.WebFontConfig = {
+        custom: {
+            families: ['spoqahansans:100,400,700'],
+            urls: ['/css/spoqahansans.css']
+        },
+        timeout: 60000
+    };
+    (function(d) {
+        var wf = d.createElement('script'), s = d.scripts[0];
+        wf.src = 'https://ajax.googleapis.com/ajax/libs/webfont/1.5.18/webfont.js';
+        s.parentNode.insertBefore(wf, s);
+    })(document);
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    ga('create', 'UA-36136046-5', 'auto');
+    ga('send', 'pageview');
+  </script>
+  <link rel="stylesheet" href="../../../css/styles.css">
+  <link href="../../../atom.xml" type="application/atom+xml" rel="alternate" title="Spoqa 기술 블로그">
+  <link rel="shortcut icon" href="../../../images/favicon.ico">
+  <style type="text/css">
+@media only screen and (max-width: 580px) {
+  .btn-job {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="header-item">
+        <div class="spoqa-logo-wrap">
+          <a class="spoqa-logo" href="../../../"><img style="margin-top:-20px" src="../../../images/logo.png" alt="Spoqa logo"></a>
+          <a class="blog-title" href="../../../">컵아이</a>
+        </div>
+        <div class="nav">
+          <input type="checkbox" id="toggle">
+          <label for="toggle" class="toggle" onclick></label>
+          <ul class="menu">
+            <li><a class="selected menu-about" href="../../../about.html">소개</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      
+
+
+<div class="post-author-info">
+  
+    <img class="portrait" src="../../../images/profile/akaz@spoqa.com.png" />
+    <h1 class="post-title">패키지 이름을 통해 디폴트 브라우저 띄워보기</h1>
+    <span class="post-date">2012년 05월 21일</span>
+    <span class="sep">|</span>
+    <span class="author-name"><a href="mailto:akaz@spoqa.com">akaz</a></span>
+  
+</div>
+
+
+
+  <div class="post"><p>최근 앱을 개발하면서 인텐트를 통해 URL을 전달하여 외부 브라우저를 띄울 일이 있었습니다. 문제가 있다면 저는 디바이스에 설치된 기본 브라우저를 이용하고 싶었는데 안드로이드는 비슷한 의도를 가진 인텐트를 처리할 여러 앱을 보여준다는 것이었습니다. 가령 URL을 처리할 여러 브라우저를 보여주는 식이지요. 따라서 가장 오래전에 설치된 브라우저를 띄울 방법을 찾아야 했습니다.</p>
+
+<h3 id="section">앱의 패키지명 얻어오기</h3>
+<hr />
+
+<p>그래서 일단 저는 디바이스에 깔린 브라우저들의 패키지 명을 전부 알아낼 수 있는 방법을 조사해보았습니다.</p>
+
+<script src="https://gist.github.com/2724011.js?file=1.java"></script>
+
+<p>먼저 실제로 호출할 법한 인텐트를 만드는 것을 볼 수 있습니다. 카테고리를 설정하고 <a href="http://developer.android.com/reference/android/net/Uri.html">Uri</a> 정보를 제공함으로써 이 인텐트는 브라우저를 호출할 인텐트라는 것을 알 수 있습니다. 그리고 만들어진 인텐트를 앞서 얻어온 패키지 매니저의 <a href="http://developer.android.com/reference/android/content/pm/PackageManager.html#queryIntentActivities\(android.content.Intent, int\)">queryIntentActivities매서드</a>에 인자로 넣어주게 되면 ResolveInfo타입의 리스트를 얻어낼 수 있습니다. <a href="http://developer.android.com/reference/android/content/pm/ResolveInfo.html">ResolveInfo타입</a>은 인텐트 필터를 이용해 분석한 인텐트 정보를 담는 클래스인데, 이 리스트를 순회하면서 현제 디바이스에 깔린 브라우저들의 패키지 명을 얻어낼 수 있는 것을 볼 수 있습니다. 실제 앱 관련 패키지에 관한 정보는 activityInfo.applicationInfo로 접근하셔서 얻어낼 수 있습니다.</p>
+
+<h3 id="apk---">APK 생성 시점 알아보기</h3>
+<hr />
+
+<p>모든 패키지 명을 알아냈다고 하더라도 이 중에서 무엇을 호출할지가 또 문제가 되죠. 앱을 설치한 시점, 즉 마지막으로 갱신된 시점을 가지고 기본으로 제공된 브라우저를 알아낼 수 있다는 가정하에 설치된 앱의 갱신 시점을 알아보는 방법을 사용하게 되었습니다.</p>
+
+<script src="https://gist.github.com/2724011.js?file=2.java"></script>
+
+<p><a href="http://developer.android.com/reference/android/content/pm/ApplicationInfo.html">ApplicationInfo클래스</a>에서 sourceDir멤버변수를 통해 전체 파일 경로를 얻어낼 수 있고 이를 통해 <a href="http://developer.android.com/reference/java/io/File.html">File클래스</a>의 lastModified메서드를 이용하여 앱의 마지막 갱신 시점을 알아낼 수 있습니다.</p>
+
+<h3 id="map--">MAP을 통해 정렬</h3>
+<hr />
+
+<p>이제 정렬을 하여 가장 옛날에 갱신된 브라우저를 호출하면 됩니다. 저의 경우 정렬을 하기 위해 Map을 사용하여 키값을 정렬하는 방식을 이용했지만, 다른 방식으로 정렬해도 상관은 없습니다.</p>
+
+<script src="https://gist.github.com/2724011.js?file=3.java"></script>
+
+<p>마지막으로 패키지 매니저의 <a href="http://developer.android.com/reference/android/content/pm/PackageManager.html#getLaunchIntentForPackage\(java.lang.String\)">getLaunchIntentForPackage메서드</a>에 앱의 패키지 명을 넣으면 다른 사용 가능한 앱을 무시하고 해당 패키지 명을 가진 앱을 호출하게 됩니다. 따라서 디폴트 브라우저를 통한 브라우징이 가능합니다.</p>
+
+<h3 id="section-1">마치며</h3>
+<hr />
+
+<p>조금 특수한 상황에서 인텐트 호출법에 대해 알아보았습니다. 비슷한 상황을 처리해야 할 분들에게 지금 보여 드린 코드 스니펫이 조금이라도 도움이 되었으면 좋겠습니다.</p>
+</div>
+
+
+<div class="post-footer">
+  <div class="back-btn"><a href="/">목록으로 돌아가기</a></div>
+  <div class="fb-like" data-href="https://spoqa.github.io/2012/05/21/open-intent-by-package-name.html" data-layout="button_count" data-width="" data-share="false" data-show-faces="false"></div>
+  <div class="fb-comments" data-href="https://spoqa.github.io/2012/05/21/open-intent-by-package-name.html" data-num-posts="5" data-width=""></div>
+  <div id="fb-root"></div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function(event) {
+    $('.fb-like, .fb-comments').attr('data-width', "100%");
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "//connect.facebook.net/ko_KR/all.js#xfbml=1&appId=207542736008055";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+});
+</script>
+<style>
+.hiring-banner {
+  height: 320px;
+  background-position-y: 80%;
+}
+.hiring-subtitle
+{
+  display: none;
+}
+.btn-job{
+  margin-top: 4px;
+}
+@media only screen and (max-width: 360px) {
+  .hiring-banner {
+    height: 220px;
+  }
+}
+}
+</style>
+
+    </div>
+    <div class="push">
+    </div>
+    <div class="footer">
+      <div id="info">
+        <span>© <a href="http://cupeye.com/">컵아이</a> Inc. All rights reserved.</span>
+        <span>Powered by <a href="https://pages.github.com/">GitHub Pages</a>.</span>
+      </div>
+    </div>
+  </div>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <script src="../../../js/highlight.pack.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    $(function() {
+      $('.hiring-banner').bind("click", function() {
+        location.href = '/jobs.html';
+      });
+      $('.toggle').bind("touchstart", function() {
+        $('.menu').toggle();
+      })
+    });
+  </script>
+  <!-- Responsive layout polyfill for IE8 and lower -->
+  <!--[if lte IE 8]>
+  <script>
+    var config = {
+        mobileResponsiveBreakpoint: 650
+    };
+    $(window).on('resize', function(){
+        if ($(window).width() <= config.mobileResponsiveBreakpoint) {
+           !$(document.body).hasClass('res-mobile')) {
+            $(document.body).addClass('res-mobile');
+        } else {
+            $(document.body).removeClass('res-mobile');
+        }
+    }).trigger('resize');
+  </script>
+  <![endif]-->
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!doctype html>
+<!--[if lt ie 7]>      <html class="lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if ie 7]>         <html class="lt-ie9 lt-ie8 ie7"> <![endif]-->
+<!--[if ie 8]>         <html class="lt-ie9 ie8"> <![endif]-->
+<!--[if gt ie 8]><!-->
+<html class=""><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Spoqa Tech Blog | CTE for postgresql and sqlalchemy</title>
+  <link rel="canonical" href="https://spoqa.github.io/2013/08/21/cte.html">
+  <meta property="og:title" content="CTE for postgresql and sqlalchemy">
+  <meta property="og:url" content="https://spoqa.github.io/2013/08/21/cte.html">
+  <meta property="og:site_name" content="컵아이">
+  
+  
+  <meta property="og:type" content="article">
+  <meta property="og:description" content="postgresql의 CTE와 sqlalchemy로 변환 예를 살펴봅니다.">
+  
+  
+  <script>
+    window.WebFontConfig = {
+        custom: {
+            families: ['spoqahansans:100,400,700'],
+            urls: ['/css/spoqahansans.css']
+        },
+        timeout: 60000
+    };
+    (function(d) {
+        var wf = d.createElement('script'), s = d.scripts[0];
+        wf.src = 'https://ajax.googleapis.com/ajax/libs/webfont/1.5.18/webfont.js';
+        s.parentNode.insertBefore(wf, s);
+    })(document);
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    ga('create', 'UA-36136046-5', 'auto');
+    ga('send', 'pageview');
+  </script>
+  <link rel="stylesheet" href="../../../css/styles.css">
+  <link href="../../../atom.xml" type="application/atom+xml" rel="alternate" title="Spoqa 기술 블로그">
+  <link rel="shortcut icon" href="../../../images/favicon.ico">
+  <style type="text/css">
+@media only screen and (max-width: 580px) {
+  .btn-job {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="header-item">
+        <div class="spoqa-logo-wrap">
+          <a class="spoqa-logo" href="../../../"><img style="margin-top:-20px" src="../../../images/logo.png" alt="Spoqa logo"></a>
+          <a class="blog-title" href="../../../">컵아이</a>
+        </div>
+        <div class="nav">
+          <input type="checkbox" id="toggle">
+          <label for="toggle" class="toggle" onclick></label>
+          <ul class="menu">
+            <li><a class="selected menu-about" href="../../../about.html">소개</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      
+
+
+<div class="post-author-info">
+  
+    <img class="portrait" src="../../../images/profile/douglas@spoqa.com.png" />
+    <h1 class="post-title">CTE for postgresql and sqlalchemy</h1>
+    <span class="post-date">2013년 08월 21일</span>
+    <span class="sep">|</span>
+    <span class="author-name"><a href="mailto:douglas@spoqa.com">박수철</a></span>
+  
+</div>
+
+
+
+  <div class="post"><p>저희 서비스는 가게마다 웹에서 접속할 수 있는 어드민을 제공하는데, 프렌차이즈가 아닌 하나의 독립적인 가게들일 경우 정보를 가져와 나타내는 데는 굳이 <a href="(http://en.wikipedia.org/wiki/Common_table_expression#Common_table_expression)">CTE</a> 를 쓸 필요가 없지만 프렌차이즈일 경우 본사와 지점들로 나누어져 있어서 본사와 지점들 정보를 다 가져오기 위해서 <a href="(http://en.wikipedia.org/wiki/Common_table_expression#Common_table_expression)">CTE</a> 를 사용하게 되었습니다.</p>
+
+<p>그럼 <a href="(http://www.postgresql.org/)">postgresql</a> 의 <a href="(http://wiki.postgresql.org/wiki/CTEReadme)">CTEReadme</a> 에 나와 있는 예제와  <a href="(http://docs.sqlalchemy.org/en/rel_0_8/core/)">sqlalchemy core</a> 로 변환하는 것까지 살펴보겠습니다.</p>
+
+<h2 id="cte">CTE란?</h2>
+<ul>
+  <li><a href="(http://en.wikipedia.org/wiki/Common_table_expression#Common_table_expression)">Common table expression</a> 의 약자로 ‘공통 테이블 식’입니다.</li>
+</ul>
+
+<h2 id="cte-">CTE 특징</h2>
+<ul>
+  <li>WITH절 같은 SELECT 문에서 효과적으로 테이블 식을 정의 할 수 있습니다.</li>
+  <li>CTE는 VIEW의 사용방법과 비슷하지만, VIEW보다 편리합니다.</li>
+  <li>VIEW와 달리 사전에 CTE를 정의할 필요가 없습니다.</li>
+  <li>개체로 저장되지 않고, 쿼리 지속시간에만 존재합니다.</li>
+  <li>CTE는 재귀 쿼리를 사용할 수 있습니다.</li>
+  <li>재귀 CTE는 여러행을 반환 가능합니다.</li>
+  <li>동일 문에서 결과 테이블을 여러번 참조 가능합니다.</li>
+</ul>
+
+<h2 id="cte--1">재귀 CTE 예제</h2>
+
+<p>아래 예제는 ‘A’부서 하위에 있는 부서만 추출하는 예제입니다.</p>
+
+<p>일단 재귀 CTE를 이용한 쿼리를 사용하려면 ‘WITH RECURSIVE’ 키워드를 추가해야 합니다.</p>
+
+<p>Table ‘department’ 인접 리스트로 조직 구조를 나타냅니다.</p>
+
+<script src="https://gist.github.com/masterguru9/6130374.js"></script>
+
+<p><img src="/images/2013-08-01/table_ex1.png" alt="screen" /></p>
+
+<p>부서 구조:</p>
+
+<pre><code>ROOT-+-&gt;A-+-&gt;B-+-&gt;C
+     |         |
+     |         +-&gt;D-+-&gt;F
+     +-&gt;E-+-&gt;G
+</code></pre>
+
+<p>A의 하위 부서를 추출, 다음과 같은 재귀 쿼리를 사용할 수 있습니다.</p>
+
+<script src="https://gist.github.com/masterguru9/0affc843bd6ad4c7e5d6.js"></script>
+
+<p>위의 쿼리는 다음과 같이 설명할 수 있습니다.</p>
+
+<p>중간 테이블(Intermediate table), 작업 테이블(work table), 결과 테이블(result table)이 있습니다.</p>
+
+<ol>
+  <li>초기화
+    <ol>
+      <li>비재귀 구간을 실행 (SELECT * FROM department WHERE name = ‘A’)</li>
+      <li>ResultTable = WorkTable = (‘A’) 결과 테이블과 작업 테이블에 결과를 배치합니다.</li>
+      <li>IntermediateTable = () 중간 테이블을 비웁니다.</li>
+    </ol>
+  </li>
+  <li>재귀 쿼리 실행
+    <ol>
+      <li>(SELECT d.* FROM WT AS d JOIN subdepartment AS sd ON d.parent_department = sd.id)
+  하위 부서와 작업 테이블을 바꾸고, 재귀 구간을 실행합니다.</li>
+      <li>중간 테이블에 쿼리 결과를 할당합니다.</li>
+      <li>결과 테이블 및 작업 테이블에 중간테이블 추가합니다.</li>
+      <li>중간 테이블을 비웁니다.</li>
+    </ol>
+  </li>
+  <li>재귀가 끝났는지 확인
+    <ol>
+      <li>2번 과정의 중간테이블이 비어 있으면 재귀의 실행이 종료되고, 결과 테이블은 반환됩니다.</li>
+      <li>중간테이블이 비어 있지 않으면 다시 2번의 과정으로 돌아갑니다.</li>
+    </ol>
+  </li>
+</ol>
+
+<p>“subdepartment”는 재귀 표현을 포함하고 있는 CTE입니다. 먼저 비재귀항이 평가되고, 다음 재귀항이 평가됩니다. 재귀항은 평가하고 처리하는 데이터가 없을 때까지 결과가 반복적으로 이전 결과에 추가됩니다. 끝으로 마지막 SELECT가 실행되고 데이터는 결과 집합에서 추출됩니다.</p>
+
+<h2 id="cte--2">CTE의 한계점</h2>
+
+<ul>
+  <li>SEARCH 및 CYCLE 절은 구현되지 않습니다.</li>
+  <li>상호 재귀는 허용되지 않습니다.</li>
+  <li>UNION ALL의 마지막 SELECT만 재귀 이름을 포함할 수 있습니다.</li>
+  <li>재귀와 재귀스캔(RecursiveScan) 계획의 비용은 항상 0입니다</li>
+</ul>
+
+<h2 id="sqlalchemy--">sqlalchemy 로 변환</h2>
+
+<p>sqlalchemy 에서 필요한 모듈들을 불러옵니다.</p>
+
+<pre><code>from sqlalchemy import Table, Column, Text, Integer, MetaData, select
+ 
+metadata = MetaData()
+</code></pre>
+
+<p>department 테이블을 정의합니다.</p>
+
+<pre><code>department = Table('department', metadata,
+	Column('id',Integer),
+	Column('parent_department',Integer),
+	Column('name',Text))
+</code></pre>
+
+<p>WITH 절부터 시작되는 CTE 부분의 비재귀항을 subdepartment로 만듭니다.  재귀 사용을 위해 <b>.cte( recursive=True)</b> 부분을 붙여줍니다.</p>
+
+<pre><code>subdepartment = select([
+	department.c.id,
+	department.c.parent_department,
+	department.c.name]).where(department.c.name == 'A') \
+	.cte(recursive=True)
+</code></pre>
+
+<p>department 와 subdepartment 에 각각 alias를 붙여줍니다.</p>
+
+<pre><code>subd_alias = subdepartment.alias()
+department_alias = department.alias()
+</code></pre>
+
+<p>CTE 부분의 재귀항과 비재귀 항을 union all 해주는 subdepartment를 만듭니다. (이 부분이 postgresql 예제 쿼리에서 봤던 WITH RECURSIVE subdepartment 전체를 나타내는 부분이라 할 수 있습니다.)</p>
+
+<pre><code>subdepartment = subdepartment.union_all(
+	select([
+		department_alias.c.id,
+		department_alias.c.parent_department,
+		department_alias.c.name]) \
+	.where(department_alias.c.parent_department == subd_alias.c.id))
+</code></pre>
+
+<p>마지막으로 결과 쿼리를 출력하기 위한 statement를 만듭니다.</p>
+
+<pre><code>statement = select([
+	subdepartment.c.id,
+	subdepartment.c.parent_department,
+	subdepartment.c.name]).order_by(subdepartment.c.name)
+</code></pre>
+
+<hr />
+<p>원문: <a href="(http://wiki.postgresql.org/wiki/CTEReadme)">CTEReadme</a></p>
+
+<p>참조:  <a href="http://msdn.microsoft.com/ko-kr/library/ms190766">공통 테이블 식 사용</a> ,<a href="http://msdn.microsoft.com/ko-kr/library/ms186243">공통 테이블 식을 사용하는 재귀 쿼리</a></p>
+
+</div>
+
+
+<div class="post-footer">
+  <div class="back-btn"><a href="/">목록으로 돌아가기</a></div>
+  <div class="fb-like" data-href="https://spoqa.github.io/2013/08/21/cte.html" data-layout="button_count" data-width="" data-share="false" data-show-faces="false"></div>
+  <div class="fb-comments" data-href="https://spoqa.github.io/2013/08/21/cte.html" data-num-posts="5" data-width=""></div>
+  <div id="fb-root"></div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function(event) {
+    $('.fb-like, .fb-comments').attr('data-width', "100%");
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "//connect.facebook.net/ko_KR/all.js#xfbml=1&appId=207542736008055";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+});
+</script>
+<style>
+.hiring-banner {
+  height: 320px;
+  background-position-y: 80%;
+}
+.hiring-subtitle
+{
+  display: none;
+}
+.btn-job{
+  margin-top: 4px;
+}
+@media only screen and (max-width: 360px) {
+  .hiring-banner {
+    height: 220px;
+  }
+}
+}
+</style>
+
+    </div>
+    <div class="push">
+    </div>
+    <div class="footer">
+      <div id="info">
+        <span>© <a href="http://cupeye.com/">컵아이</a> Inc. All rights reserved.</span>
+        <span>Powered by <a href="https://pages.github.com/">GitHub Pages</a>.</span>
+      </div>
+    </div>
+  </div>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <script src="../../../js/highlight.pack.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+    $(function() {
+      $('.hiring-banner').bind("click", function() {
+        location.href = '/jobs.html';
+      });
+      $('.toggle').bind("touchstart", function() {
+        $('.menu').toggle();
+      })
+    });
+  </script>
+  <!-- Responsive layout polyfill for IE8 and lower -->
+  <!--[if lte IE 8]>
+  <script>
+    var config = {
+        mobileResponsiveBreakpoint: 650
+    };
+    $(window).on('resize', function(){
+        if ($(window).width() <= config.mobileResponsiveBreakpoint) {
+           !$(document.body).hasClass('res-mobile')) {
+            $(document.body).addClass('res-mobile');
+        } else {
+            $(document.body).removeClass('res-mobile');
+        }
+    }).trigger('resize');
+  </script>
+  <![endif]-->
+</body>
+</html>
